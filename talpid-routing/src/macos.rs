@@ -197,6 +197,7 @@ impl RouteManagerImpl {
             "-interface",
             &tunnel_interface,
         ];
+        log::debug!("adding tunnel gateway");
         exec_command(&add_tunnel_gw)
             .await
             .map_err(Error::FailedToAddRoute)?;
@@ -211,6 +212,7 @@ impl RouteManagerImpl {
             "-ifa",
             &tunnel_address_str,
         ];
+        log::debug!("adding tunnel default route");
         exec_command(&add_tunnel_default)
             .await
             .map_err(Error::FailedToAddRoute)?;
@@ -227,6 +229,7 @@ impl RouteManagerImpl {
             "-ifa",
             &primary_ip_str,
         ];
+        log::debug!("adding primary default route");
         exec_command(&add_primary_default)
             .await
             .map_err(Error::FailedToAddRoute)?;
@@ -241,16 +244,19 @@ impl RouteManagerImpl {
             "-ifa",
             &primary_ip_str,
         ];
+        log::debug!("adding primary relay route");
         exec_command(&add_primary_relay_route)
             .await
             .map_err(Error::FailedToAddRoute)?;
 
         let add_half_of_internet = ["add", "-net", "0.0.0.0/1", &tunnel_gateway_str];
 
+        log::debug!("adding half of internet route");
         exec_command(&add_half_of_internet)
             .await
             .map_err(Error::FailedToAddRoute)?;
         let add_other_half_of_internet = ["add", "-net", "128.0.0.0/1", &tunnel_gateway_str];
+        log::debug!("adding other half of internet route");
         exec_command(&add_other_half_of_internet)
             .await
             .map_err(Error::FailedToAddRoute)?;
