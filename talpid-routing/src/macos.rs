@@ -239,7 +239,7 @@ impl RouteManagerImpl {
             "add",
             "-net",
             &relay_addr_str,
-            "-gatewmay",
+            "-gateway",
             &primary_gateway_str,
             "-ifa",
             &primary_ip_str,
