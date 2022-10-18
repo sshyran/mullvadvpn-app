@@ -406,7 +406,7 @@ impl RouteManagerImpl {
         }
 
         if let Some(backup) = self.primary_backup.take() {
-            let default_route = "0.0.0.0:0".parse().unwrap();
+            let default_route = "0.0.0.0/0".parse().unwrap();
             if let Err(err) = Self::delete_route(default_route).await {
                 log::debug!("Failed to remove old deafult route");
             }
