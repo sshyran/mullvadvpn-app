@@ -288,11 +288,45 @@ impl WireguardMonitor {
                 .map_err(Error::SetupRoutingError)
                 .map_err(CloseMsg::SetupError)?;
 
+            #[cfg(not(target_os = "macos"))]
             let routes = Self::get_pre_tunnel_routes(&iface_name, &config)
                 .chain(Self::get_endpoint_routes(&endpoint_addrs))
                 .collect();
+            #[cfg(not(target_os = "macos"))]
             args.route_manager
                 .add_routes(routes)
+                .await
+                .map_err(Error::SetupRoutingError)
+                .map_err(CloseMsg::SetupError)?;
+
+            let tunnel_ipv4 = match config
+                .tunnel
+                .addresses
+                .iter()
+                .cloned()
+                .filter(|ip| ip.is_ipv4())
+                .next()
+                .unwrap()
+            {
+                IpAddr::V4(v4) => v4,
+                IpAddr::V6(_) => panic!("unexpected IPV6"),
+            };
+
+            let relay_addr = match config.peers[0].endpoint.ip() {
+                IpAddr::V4(v4) => v4,
+                other => panic!("unexpected IPv6"),
+            };
+            #[cfg(target_os = "macos")]
+            args.route_manager
+                .setup_tunnel_routes(
+                    tunnel_ipv4,
+                    iface_name.to_string(),
+                    config.ipv4_gateway,
+                    "192.168.88.246".parse().unwrap(),
+                    "192.168.88.1".parse().unwrap(),
+                    "en0".to_string(),
+                    relay_addr,
+                )
                 .await
                 .map_err(Error::SetupRoutingError)
                 .map_err(CloseMsg::SetupError)?;

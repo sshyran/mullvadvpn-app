@@ -9,7 +9,7 @@ use futures::channel::{
     mpsc::{self, UnboundedSender},
     oneshot,
 };
-use std::{collections::HashSet, io};
+use std::{collections::HashSet, io, net::Ipv4Addr};
 #[cfg(target_os = "macos")]
 use talpid_types::net::IpVersion;
 
@@ -71,6 +71,37 @@ impl RouteManagerHandle {
         self.tx
             .unbounded_send(RouteManagerCommand::AddRoutes(routes, response_tx))
             .map_err(|_| Error::RouteManagerDown)?;
+        response_rx
+            .await
+            .map_err(|_| Error::ManagerChannelDown)?
+            .map_err(Error::PlatformError)
+    }
+
+    /// Setup tunnel routes
+    #[cfg(target_os = "macos")]
+    pub async fn setup_tunnel_routes(
+        &self,
+        tunnel_ip: Ipv4Addr,
+        tunnel_interface: String,
+        tunnel_gateway: Ipv4Addr,
+        primary_ip: Ipv4Addr,
+        primary_gateway: Ipv4Addr,
+        primary_interface: String,
+        relay_address: Ipv4Addr,
+    ) -> Result<(), Error> {
+        let (response_tx, response_rx) = oneshot::channel();
+        self.tx
+            .unbounded_send(RouteManagerCommand::SetupTunnelRoutes {
+                tunnel_interface,
+                tunnel_gateway,
+                tunnel_ip,
+                primary_interface,
+                primary_ip,
+                primary_gateway,
+                relay_address,
+                response_tx,
+            })
+            .map_err(|_| Error::ManagerChannelDown)?;
         response_rx
             .await
             .map_err(|_| Error::ManagerChannelDown)?
@@ -158,6 +189,17 @@ type Fwmark = u32;
 /// Commands for the underlying route manager object.
 #[derive(Debug)]
 pub(crate) enum RouteManagerCommand {
+    #[cfg(target_os = "macos")]
+    SetupTunnelRoutes {
+        tunnel_interface: String,
+        tunnel_gateway: Ipv4Addr,
+        tunnel_ip: Ipv4Addr,
+        primary_interface: String,
+        primary_ip: Ipv4Addr,
+        primary_gateway: Ipv4Addr,
+        relay_address: Ipv4Addr,
+        response_tx: oneshot::Sender<Result<(), PlatformError>>,
+    },
     AddRoutes(
         HashSet<RequiredRoute>,
         oneshot::Sender<Result<(), PlatformError>>,
