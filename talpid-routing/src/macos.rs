@@ -9,7 +9,7 @@ use ipnetwork::IpNetwork;
 use std::{
     collections::HashSet,
     io,
-    net::{IpAddr, Ipv4Addr},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr},
     process::{ExitStatus, Stdio},
 };
 use talpid_types::net::IpVersion;
@@ -17,7 +17,6 @@ use tokio::{io::AsyncBufReadExt, process::Command};
 use tokio_stream::wrappers::LinesStream;
 
 pub type Result<T> = std::result::Result<T, Error>;
-mod scutil;
 
 /// Errors that can happen in the macOS routing integration.
 #[derive(err_derive::Error, Debug)]
@@ -43,9 +42,11 @@ pub enum Error {
     #[error(display = "Unexpected output from netstat")]
     BadOutputFromNetstat,
 
+    /// Failed to run scutil
     #[error(display = "Failed to run scutil command")]
     ScUtilCommand,
 
+    /// Encountered unexpected output from scutil
     #[error(display = "Unexpected scutil output")]
     ScUtilUnexpectedOutput,
 }
@@ -66,22 +67,30 @@ pub struct RouteManagerImpl {
     applied_routes: HashSet<Route>,
     v4_gateway: Option<Node>,
     v6_gateway: Option<Node>,
-    primary_backup: Option<PrimaryIfaceBackup>,
+    primary_backup_v4: Option<PrimaryIfaceBackupV4>,
+    primary_backup_v6: Option<PrimaryIfaceBackupV6>,
     connectivity_change:
         Option<Box<dyn FusedStream<Item = std::io::Result<()>> + Unpin + Send + Sync>>,
+    excluded_interface: Option<String>,
 }
 
-struct PrimaryIfaceBackup {
+struct PrimaryIfaceBackupV4 {
     interface: String,
     gateway: Ipv4Addr,
     address: Ipv4Addr,
 }
 
+struct PrimaryIfaceBackupV6 {
+    interface: String,
+    gateway: Ipv6Addr,
+    address: Ipv6Addr,
+}
+
 impl RouteManagerImpl {
     /// create new route manager
     pub async fn new(required_routes: HashSet<RequiredRoute>) -> Result<Self> {
-        let v4_gateway = Self::get_default_node(IpVersion::V4).await?;
-        let v6_gateway = Self::get_default_node(IpVersion::V6).await?;
+        let v4_gateway = Self::get_default_node(IpVersion::V4, None).await?;
+        let v6_gateway = Self::get_default_node(IpVersion::V6, None).await?;
 
         let monitor = listen_for_default_route_changes()?;
 
@@ -89,9 +98,11 @@ impl RouteManagerImpl {
             default_destinations: HashSet::new(),
             applied_routes: HashSet::new(),
             connectivity_change: Some(Box::new(monitor.fuse())),
-            primary_backup: None,
+            primary_backup_v4: None,
+            primary_backup_v6: None,
             v4_gateway,
             v6_gateway,
+            excluded_interface: None,
         };
 
         manager.add_required_routes(required_routes).await?;
@@ -124,6 +135,10 @@ impl RouteManagerImpl {
                         Some(RouteManagerCommand::ClearRoutes) => {
                             self.cleanup_routes().await;
                         },
+                        Some(RouteManagerCommand::SetExcludedInterface(interface, tx)) => {
+                            self.excluded_interface = interface;
+                            let _ = tx.send(());
+                        }
                         None => {
                             break;
                         }
@@ -132,18 +147,18 @@ impl RouteManagerImpl {
 
                 _result = connectivity_change.select_next_some() => {
                     log::debug!("Ignoring default route changes");
-                    // let v4_gateway = Self::get_default_node(IpVersion::V4).await.unwrap_or(None);
-                    // let v6_gateway = Self::get_default_node(IpVersion::V6).await.unwrap_or(None);
+                    let v4_gateway = Self::get_default_node(IpVersion::V4, self.excluded_interface.clone()).await.unwrap_or(None);
+                    let v6_gateway = Self::get_default_node(IpVersion::V6, self.excluded_interface.clone()).await.unwrap_or(None);
 
-                    // if v4_gateway != self.v4_gateway {
-                    //     self.v4_gateway = v4_gateway;
-                    //     self.apply_new_default_route(&self.v4_gateway, true).await;
-                    // }
+                    if v4_gateway != self.v4_gateway {
+                        self.v4_gateway = v4_gateway;
+                        self.apply_new_default_route(&self.v4_gateway, true).await;
+                    }
 
-                    // if v6_gateway != self.v6_gateway {
-                    //     self.v6_gateway = v6_gateway;
-                    //     self.apply_new_default_route(&self.v6_gateway, false).await;
-                    // }
+                    if v6_gateway != self.v6_gateway {
+                        self.v6_gateway = v6_gateway;
+                        self.apply_new_default_route(&self.v6_gateway, false).await;
+                    }
                 },
                 complete => {
                     break;
@@ -261,7 +276,7 @@ impl RouteManagerImpl {
             .await
             .map_err(Error::FailedToAddRoute)?;
 
-        self.primary_backup = Some(PrimaryIfaceBackup {
+        self.primary_backup_v4 = Some(PrimaryIfaceBackupV4 {
             interface: primary_interface,
             gateway: primary_gateway,
             address: primary_ip,
@@ -270,42 +285,45 @@ impl RouteManagerImpl {
     }
 
     async fn add_required_routes(&mut self, required_routes: HashSet<RequiredRoute>) -> Result<()> {
-        // let mut routes_to_apply = vec![];
-        // let mut default_destinations = HashSet::new();
+        let mut routes_to_apply = vec![];
+        let mut default_destinations = HashSet::new();
 
-        // for route in required_routes {
-        //     match route.node {
-        //         NetNode::DefaultNode => {
-        //             default_destinations.insert(route.prefix);
-        //         }
+        for route in required_routes {
+            match route.node {
+                NetNode::DefaultNode => {
+                    default_destinations.insert(route.prefix);
+                }
 
-        //         NetNode::RealNode(node) => routes_to_apply.push(Route::new(node, route.prefix)),
-        //     }
-        // }
+                NetNode::RealNode(node) => routes_to_apply.push(Route::new(node, route.prefix)),
+            }
+        }
 
-        // for route in routes_to_apply {
-        //     Self::add_route(&route).await?;
-        //     self.applied_routes.insert(route);
-        // }
+        for route in routes_to_apply {
+            Self::add_route(&route).await?;
+            self.applied_routes.insert(route);
+        }
 
-        // for destination in default_destinations.iter() {
-        //     match (&self.v4_gateway, &self.v6_gateway, destination.is_ipv4()) {
-        //         (Some(gateway), _, true) | (_, Some(gateway), false) => {
-        //             let route = Route::new(gateway.clone(), *destination);
-        //             Self::add_route(&route).await?;
-        //             self.applied_routes.insert(route);
-        //         }
-        //         _ => (),
-        //     };
-        // }
+        for destination in default_destinations.iter() {
+            match (&self.v4_gateway, &self.v6_gateway, destination.is_ipv4()) {
+                (Some(gateway), _, true) | (_, Some(gateway), false) => {
+                    let route = Route::new(gateway.clone(), *destination);
+                    Self::add_route(&route).await?;
+                    self.applied_routes.insert(route);
+                }
+                _ => (),
+            };
+        }
 
-        // self.default_destinations = default_destinations;
+        self.default_destinations = default_destinations;
 
         Ok(())
     }
 
     // Retrieves the node that's currently used to reach 0.0.0.0/0
-    pub(crate) async fn get_default_node(ip_version: IpVersion) -> Result<Option<Node>> {
+    pub(crate) async fn get_default_node(
+        ip_version: IpVersion,
+        excluded_interface: Option<String>,
+    ) -> Result<Option<Node>> {
         let ip_version_arg = match ip_version {
             IpVersion::V4 => "-inet",
             IpVersion::V6 => "-inet6",
@@ -405,7 +423,7 @@ impl RouteManagerImpl {
             };
         }
 
-        if let Some(backup) = self.primary_backup.take() {
+        if let Some(backup) = self.primary_backup_v4.take() {
             let default_route = "0.0.0.0/0".parse().unwrap();
             if let Err(err) = Self::delete_route(default_route).await {
                 log::debug!("Failed to remove old deafult route");

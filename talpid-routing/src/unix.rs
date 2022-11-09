@@ -204,6 +204,7 @@ pub(crate) enum RouteManagerCommand {
         HashSet<RequiredRoute>,
         oneshot::Sender<Result<(), PlatformError>>,
     ),
+
     ClearRoutes,
     Shutdown(oneshot::Sender<()>),
     #[cfg(target_os = "linux")]
@@ -221,6 +222,8 @@ pub(crate) enum RouteManagerCommand {
         Option<Fwmark>,
         oneshot::Sender<Result<Option<Route>, PlatformError>>,
     ),
+    #[cfg(target_os = "macos")]
+    SetExcludedInterface(Option<String>, oneshot::Sender<()>),
 }
 
 #[cfg(target_os = "linux")]
@@ -346,10 +349,14 @@ impl Drop for RouteManager {
 
 /// Returns a tuple containing a IPv4 and IPv6 default route nodes.
 #[cfg(target_os = "macos")]
-pub async fn get_default_routes() -> Result<(Option<super::Node>, Option<super::Node>), Error> {
+pub async fn get_default_routes(
+    excluded_interface: Option<String>,
+) -> Result<(Option<super::Node>, Option<super::Node>), Error> {
     use futures::TryFutureExt;
     futures::try_join!(
-        imp::RouteManagerImpl::get_default_node(IpVersion::V4).map_err(Into::into),
-        imp::RouteManagerImpl::get_default_node(IpVersion::V6).map_err(Into::into)
+        imp::RouteManagerImpl::get_default_node(IpVersion::V4, excluded_interface.clone())
+            .map_err(Into::into),
+        imp::RouteManagerImpl::get_default_node(IpVersion::V6, excluded_interface)
+            .map_err(Into::into)
     )
 }

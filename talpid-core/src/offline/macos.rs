@@ -58,7 +58,7 @@ impl MonitorHandle {
 }
 
 async fn exists_non_tunnel_default_route(excluded_interface: Option<String>) -> bool {
-    match talpid_routing::get_default_routes().await {
+    match talpid_routing::get_default_routes(excluded_interface).await {
         Ok((Some(node), _)) | Ok((None, Some(node))) => {
             let route_exists = node
                 .get_device()
@@ -91,7 +91,7 @@ pub async fn spawn_monitor(notify_tx: UnboundedSender<bool>) -> Result<MonitorHa
         is_offline: !exists_non_tunnel_default_route(None).await,
     };
 
-    let route_monitor = watch_route_monitor(context)?;
+    let route_monitor = watch_route_monitor(context, excluded_interface.clone())?;
     tokio::spawn(route_monitor);
     Ok(MonitorHandle {
         excluded_interface,
@@ -101,12 +101,18 @@ pub async fn spawn_monitor(notify_tx: UnboundedSender<bool>) -> Result<MonitorHa
 
 fn watch_route_monitor(
     mut context: OfflineStateContext,
+    excluded_interface: Arc<Mutex<Option<String>>>,
 ) -> Result<impl Future<Output = ()>, Error> {
     let mut monitor = talpid_routing::listen_for_default_route_changes()?;
 
     Ok(async move {
         while let Some(_route_change) = monitor.next().await {
-            context.new_state(!exists_non_tunnel_default_route(None).await);
+            let interface = excluded_interface
+                .lock()
+                .expect("excluded_interface lock poisoned")
+                .clone();
+
+            context.new_state(!exists_non_tunnel_default_route(interface).await);
             if context.should_shut_down() {
                 break;
             }
