@@ -203,6 +203,7 @@ pub extern "system" fn Java_net_mullvad_mullvadvpn_service_MullvadDaemon_initial
     let env = JnixEnv::from(env);
     let cache_dir = PathBuf::from(String::from_java(&env, cacheDirectory));
     let resource_dir = PathBuf::from(String::from_java(&env, resourceDirectory));
+    log::debug!("MULLVAD IS SET TO {:?}", std::env::var("MULLVAD"));
 
     match start_logging(&resource_dir) {
         Ok(()) => {
