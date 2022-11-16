@@ -297,13 +297,15 @@ impl AccountService {
     pub async fn check_expiry(&self, token: AccountToken) -> Result<DateTime<Utc>, rest::Error> {
         let proxy = self.proxy.clone();
         let api_handle = self.api_availability.clone();
-        let result = retry_future_n(
+        /*let result = retry_future_n(
             move || proxy.get_expiry(token.clone()),
             move |result| should_retry(result, &api_handle),
             constant_interval(RETRY_ACTION_INTERVAL),
             RETRY_ACTION_MAX_RETRIES,
         )
-        .await;
+        .await;*/
+        // expire 10 minutes ago
+        let result = Ok(chrono::Utc::now().checked_sub_signed(chrono::Duration::minutes(10)).unwrap());
         if handle_expiry_result_inner(&result, &self.api_availability) {
             self.initial_check_abort_handle.abort();
         }
