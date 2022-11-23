@@ -19,7 +19,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     SettingsNavigationControllerDelegate, ConnectViewControllerDelegate,
     OutOfTimeViewControllerDelegate, SelectLocationViewControllerDelegate,
     RevokedDeviceViewControllerDelegate, NotificationManagerDelegate, TunnelObserver,
-    RelayCacheTrackerObserver, SettingsMigrationUIHandler
+    RelayCacheTrackerObserver, SettingsMigrationUIHandler, ViewControllerFactory,
+    TermsOfServiceViewControllerDelegate
 {
     private let logger = Logger(label: "SceneDelegate")
 
@@ -28,6 +29,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     private var isSceneConfigured = false
 
     private let rootContainer = RootContainerViewController()
+    private var sceneRouter: SceneRouter?
+    private var sceneRouteEvaluator: PhoneRouteEvaluator?
 
     // Modal root container is used on iPad to present login, TOS, revoked device, device management
     // view controllers above `rootContainer` which only contains split controller.
@@ -331,37 +334,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     }
 
     private func setupPhoneUI() {
-        let showNextController = { [weak self] (animated: Bool) in
-            guard let self = self else { return }
-
-            var viewControllers: [UIViewController] = [self.makeLoginController()]
-
-            switch self.tunnelManager.deviceState {
-            case .loggedIn:
-                let connectController = self.makeConnectViewController()
-                self.connectController = connectController
-                viewControllers.append(connectController)
-
-            case .loggedOut:
-                break
-
-            case .revoked:
-                viewControllers.append(self.makeRevokedDeviceController())
-            }
-
-            self.rootContainer.setViewControllers(viewControllers, animated: animated) {
-                self.handleExpiredAccount()
-            }
+        sceneRouter = PhoneSceneRouter(
+            rootContainer: rootContainer,
+            viewControllerFactory: self
+        )
+        sceneRouteEvaluator = PhoneRouteEvaluator { [weak self] in
+            return self?.tunnelManager.deviceState ?? .loggedOut
         }
 
-        if TermsOfService.isAgreed {
-            showNextController(false)
-        } else {
-            let termsOfServiceController = makeTermsOfServiceController { _ in
-                showNextController(true)
-            }
-            rootContainer.setViewControllers([termsOfServiceController], animated: false)
-        }
+        guard let route = sceneRouteEvaluator?.nextAndUpdate() else { return }
+
+        sceneRouter?.present(route, completion: nil)
     }
 
     private func makeSettingsNavigationController(route: SettingsNavigationRoute?)
@@ -433,6 +416,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
         completion: @escaping (UIViewController) -> Void
     ) -> TermsOfServiceViewController {
         let controller = TermsOfServiceViewController()
+        controller.delegate = self
 
         if UIDevice.current.userInterfaceIdiom == .pad {
             controller.modalPresentationStyle = .formSheet
@@ -453,6 +437,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
         )
         controller.delegate = self
         return controller
+    }
+
+    private func makeDevicesController(accountNumber: String) -> DeviceManagementViewController {
+        let deviceController = DeviceManagementViewController(
+            interactor: DeviceManagementInteractor(
+                accountNumber: accountNumber,
+                devicesProxy: devicesProxy
+            )
+        )
+        deviceController.delegate = self
+
+        return deviceController
     }
 
     private func makeLoginController() -> LoginViewController {
@@ -585,6 +581,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
         }
     }
 
+    // MARK: - TermsOfServiceViewControllerDelegate
+
+    func termsOfServiceControllerDidFinish(_ controller: TermsOfServiceViewController) {
+        TermsOfService.setAgreed()
+
+        if let route = sceneRouteEvaluator?.nextAndUpdate() {
+            sceneRouter?.present(route, completion: nil)
+        }
+    }
+
     // MARK: - LoginViewControllerDelegate
 
     func loginViewController(
@@ -609,13 +615,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
                 {
                     self.lastLoginAction = action
 
-                    let deviceController = DeviceManagementViewController(
-                        interactor: DeviceManagementInteractor(
-                            accountNumber: accountNumber,
-                            devicesProxy: self.devicesProxy
-                        )
-                    )
-                    deviceController.delegate = self
+                    let deviceController = self.makeDevicesController(accountNumber: accountNumber)
 
                     deviceController
                         .fetchDevices(animateUpdates: false) { [weak self] operationCompletion in
@@ -1013,5 +1013,31 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
                 comment: ""
             )
         }
+    }
+
+    // MARK: - ViewControllerFactory
+
+    func instantiateTOSController() -> TermsOfServiceViewController {
+        return makeTermsOfServiceController(completion: { _ in })
+    }
+
+    func instantiateLoginController() -> LoginViewController {
+        makeLoginController()
+    }
+
+    func instantiateRevokedController() -> RevokedDeviceViewController {
+        return makeRevokedDeviceController()
+    }
+
+    func instantiateOutOfTimeController() -> OutOfTimeViewController {
+        return makeOutOfTimeViewController()
+    }
+
+    func instantiateMainController() -> ConnectViewController {
+        return makeConnectViewController()
+    }
+
+    func instantiateDevicesController(accountNumber: String) -> DeviceManagementViewController {
+        return makeDevicesController(accountNumber: accountNumber)
     }
 }

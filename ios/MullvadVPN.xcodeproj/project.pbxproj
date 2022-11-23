@@ -303,6 +303,11 @@
 		58E11188292FA11F009FCA84 /* SettingsMigrationUIHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E11187292FA11F009FCA84 /* SettingsMigrationUIHandler.swift */; };
 		58E20771274672CA00DE5D77 /* LaunchViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E20770274672CA00DE5D77 /* LaunchViewController.swift */; };
 		58E25F812837BBBB002CFB2C /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E25F802837BBBB002CFB2C /* SceneDelegate.swift */; };
+		58E33F84292E06720015AAFE /* PhoneRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E33F83292E06720015AAFE /* PhoneRoute.swift */; };
+		58E33F87292E1D750015AAFE /* SceneRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E33F86292E1D750015AAFE /* SceneRouter.swift */; };
+		58E33F89292E1D900015AAFE /* ViewControllerFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E33F88292E1D900015AAFE /* ViewControllerFactory.swift */; };
+		58E33F8B292E1DAF0015AAFE /* PhoneRouteEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E33F8A292E1DAF0015AAFE /* PhoneRouteEvaluator.swift */; };
+		58E33F8D292E1DC00015AAFE /* PhoneSceneRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E33F8C292E1DC00015AAFE /* PhoneSceneRouter.swift */; };
 		58E511E628DDDEAC00B0BCDE /* CodingErrors+CustomErrorDescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E511E528DDDEAC00B0BCDE /* CodingErrors+CustomErrorDescription.swift */; };
 		58E511E828DDDF2400B0BCDE /* CodingErrors+CustomErrorDescription.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E511E528DDDEAC00B0BCDE /* CodingErrors+CustomErrorDescription.swift */; };
 		58E6771F24ADFE7800AA26E7 /* SettingsNavigationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E6771E24ADFE7800AA26E7 /* SettingsNavigationController.swift */; };
@@ -802,6 +807,11 @@
 		58E11187292FA11F009FCA84 /* SettingsMigrationUIHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsMigrationUIHandler.swift; sourceTree = "<group>"; };
 		58E20770274672CA00DE5D77 /* LaunchViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchViewController.swift; sourceTree = "<group>"; };
 		58E25F802837BBBB002CFB2C /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		58E33F83292E06720015AAFE /* PhoneRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneRoute.swift; sourceTree = "<group>"; };
+		58E33F86292E1D750015AAFE /* SceneRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRouter.swift; sourceTree = "<group>"; };
+		58E33F88292E1D900015AAFE /* ViewControllerFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewControllerFactory.swift; sourceTree = "<group>"; };
+		58E33F8A292E1DAF0015AAFE /* PhoneRouteEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneRouteEvaluator.swift; sourceTree = "<group>"; };
+		58E33F8C292E1DC00015AAFE /* PhoneSceneRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSceneRouter.swift; sourceTree = "<group>"; };
 		58E511E028DDB7F100B0BCDE /* WrappingError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrappingError.swift; sourceTree = "<group>"; };
 		58E511E328DDDE8900B0BCDE /* CustomErrorDescriptionProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomErrorDescriptionProtocol.swift; sourceTree = "<group>"; };
 		58E511E528DDDEAC00B0BCDE /* CodingErrors+CustomErrorDescription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "CodingErrors+CustomErrorDescription.swift"; sourceTree = "<group>"; };
@@ -1400,6 +1410,7 @@
 				5878A27C2909657C0096FC88 /* RevokedDeviceInteractor.swift */,
 				587425C02299833500CA2045 /* RootContainerViewController.swift */,
 				58E25F802837BBBB002CFB2C /* SceneDelegate.swift */,
+				58E33F85292E1D680015AAFE /* Routing */,
 				5888AD82227B11080051EB06 /* SelectLocationCell.swift */,
 				5857F24224C8662600CF6F47 /* SelectLocationHeaderView.swift */,
 				5857F24624C882D700CF6F47 /* SelectLocationNavigationController.swift */,
@@ -1479,6 +1490,18 @@
 				58218E1628B65396000C624F /* ICMPHeader.h */,
 			);
 			path = TunnelMonitor;
+			sourceTree = "<group>";
+		};
+		58E33F85292E1D680015AAFE /* Routing */ = {
+			isa = PBXGroup;
+			children = (
+				58E33F86292E1D750015AAFE /* SceneRouter.swift */,
+				58E33F88292E1D900015AAFE /* ViewControllerFactory.swift */,
+				58E33F83292E06720015AAFE /* PhoneRoute.swift */,
+				58E33F8A292E1DAF0015AAFE /* PhoneRouteEvaluator.swift */,
+				58E33F8C292E1DC00015AAFE /* PhoneSceneRouter.swift */,
+			);
+			path = Routing;
 			sourceTree = "<group>";
 		};
 		58E5126628DDF04200B0BCDE /* Operations */ = {
@@ -2213,10 +2236,12 @@
 				58B993B12608A34500BA7811 /* LoginContentView.swift in Sources */,
 				5878A27529093A310096FC88 /* StorePaymentEvent.swift in Sources */,
 				58B26E2A2943545A00D5980C /* NotificationManagerDelegate.swift in Sources */,
+				58E33F87292E1D750015AAFE /* SceneRouter.swift in Sources */,
 				58E6771F24ADFE7800AA26E7 /* SettingsNavigationController.swift in Sources */,
 				58A1AA8C23F5584C009F7EA6 /* ConnectionPanelView.swift in Sources */,
 				5878A27B2909649A0096FC88 /* CustomOverlayRenderer.swift in Sources */,
 				582BB1B3229574F40055B6EF /* SettingsAccountCell.swift in Sources */,
+				58E33F8D292E1DC00015AAFE /* PhoneSceneRouter.swift in Sources */,
 				588527B2276B3F0700BAA373 /* LoadTunnelConfigurationOperation.swift in Sources */,
 				58F1311527E0B2AB007AC5BC /* Result+Extensions.swift in Sources */,
 				5867770E29096984006F721F /* OutOfTimeInteractor.swift in Sources */,
@@ -2240,6 +2265,7 @@
 				58FB865A26EA214400F188BC /* RelayCacheTrackerObserver.swift in Sources */,
 				58ACF64D26567A5000ACE4B7 /* CustomSwitch.swift in Sources */,
 				58F2E14C276A61C000A79513 /* RotateKeyOperation.swift in Sources */,
+				58E33F89292E1D900015AAFE /* ViewControllerFactory.swift in Sources */,
 				5871FB96254ADE4E0051A0A4 /* ConsolidatedApplicationLog.swift in Sources */,
 				068CE57029278F5300A068BB /* MigrationFromV1ToV2.swift in Sources */,
 				58FEEB58260B662E00A621A8 /* AutomaticKeyboardResponder.swift in Sources */,
@@ -2256,6 +2282,7 @@
 				58EE2E3B272FF814003BFF93 /* SettingsDataSourceDelegate.swift in Sources */,
 				5823FA5426CE49F700283BF8 /* TunnelObserver.swift in Sources */,
 				5888AD87227B17950051EB06 /* SelectLocationViewController.swift in Sources */,
+				58E33F84292E06720015AAFE /* PhoneRoute.swift in Sources */,
 				58293FB3251241B4005D0BB5 /* CustomTextView.swift in Sources */,
 				586A950E290125F3007BAF2B /* ProductsRequestOperation.swift in Sources */,
 				58F19E35228C15BA00C7710B /* SpinnerActivityIndicatorView.swift in Sources */,
@@ -2348,6 +2375,7 @@
 				58C3A4B222456F1B00340BDB /* AccountInputGroupView.swift in Sources */,
 				58ACF64B26553C3F00ACE4B7 /* SettingsSwitchCell.swift in Sources */,
 				587EB67027143B6500123C75 /* DataSourceSnapshot.swift in Sources */,
+				58E33F8B292E1DAF0015AAFE /* PhoneRouteEvaluator.swift in Sources */,
 				580F8B8328197881002E0998 /* TunnelSettingsV2.swift in Sources */,
 				5803B4B22940A48700C23744 /* TunnelStore.swift in Sources */,
 				586A950F29012BEE007BAF2B /* AddressCacheTracker.swift in Sources */,

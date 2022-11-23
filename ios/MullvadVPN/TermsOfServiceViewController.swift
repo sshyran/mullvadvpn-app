@@ -9,9 +9,15 @@
 import SafariServices
 import UIKit
 
+protocol TermsOfServiceViewControllerDelegate: AnyObject {
+    func termsOfServiceControllerDidFinish(_ controller: TermsOfServiceViewController)
+}
+
 class TermsOfServiceViewController: UIViewController, RootContainment,
     SFSafariViewControllerDelegate
 {
+    weak var delegate: TermsOfServiceViewControllerDelegate?
+
     var completionHandler: ((UIViewController) -> Void)?
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -69,6 +75,8 @@ class TermsOfServiceViewController: UIViewController, RootContainment,
 
     @objc private func handleAgreeButton(_ sender: Any) {
         completionHandler?(self)
+
+        delegate?.termsOfServiceControllerDidFinish(self)
     }
 
     // MARK: - SFSafariViewControllerDelegate
