@@ -4,8 +4,7 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 
 @Parcelize
-data class TunnelEndpoint(
+data class ObfuscationEndpoint(
     val endpoint: Endpoint,
-    val quantumResistant: Boolean,
-    val obfuscation: ObfuscationEndpoint?
+    val obfuscationType: ObfuscationType
 ) : Parcelable
