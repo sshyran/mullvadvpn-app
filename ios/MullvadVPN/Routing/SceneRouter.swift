@@ -9,5 +9,7 @@
 import Foundation
 
 protocol SceneRouter {
-    func present(_ route: PhoneRoute, completion: (() -> Void)?)
+    associatedtype Route
+
+    func present(_ route: Route, completion: (() -> Void)?)
 }

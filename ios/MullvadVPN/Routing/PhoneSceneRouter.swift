@@ -10,15 +10,16 @@ import UIKit
 
 final class PhoneSceneRouter: SceneRouter {
     let rootContainer: RootContainerViewController
-    let viewControllerFactory: ViewControllerFactory
+    let viewControllerFactory: AnyViewControllerFactory<PhoneRoute>
 
-    init(rootContainer: RootContainerViewController, viewControllerFactory: ViewControllerFactory) {
+    init<T>(rootContainer: RootContainerViewController, viewControllerFactory: T) where T: ViewControllerFactory, T.Route == PhoneRoute {
         self.rootContainer = rootContainer
-        self.viewControllerFactory = viewControllerFactory
+        self.viewControllerFactory = AnyViewControllerFactory(viewControllerFactory)
     }
 
     func present(_ route: PhoneRoute, completion: (() -> Void)?) {
-        makeAndSetupViewController(for: route) { [weak self] controller, error in
+        instantiateAndPrefetchController(for: route) { [weak self] controller, error in
+            // TODO: handle error?
             self?.rootContainer.pushViewController(
                 controller,
                 animated: true,
@@ -27,33 +28,18 @@ final class PhoneSceneRouter: SceneRouter {
         }
     }
 
-    private func makeAndSetupViewController(
+    private func instantiateAndPrefetchController(
         for route: PhoneRoute,
         _ completion: @escaping (UIViewController, Error?) -> Void
     ) {
-        switch route {
-        case .tos:
-            completion(viewControllerFactory.instantiateTOSController(), nil)
+        let controller = viewControllerFactory.instantiateViewController(for: route)
 
-        case .login:
-            completion(viewControllerFactory.instantiateLoginController(), nil)
-
-        case let .devices(accountNumber):
-            let controller = viewControllerFactory
-                .instantiateDevicesController(accountNumber: accountNumber)
-
-            controller.fetchDevices(animateUpdates: false) { operationCompletion in
-                completion(controller, operationCompletion.error)
+        if let prefetching = controller as? ViewControllerDataPrefetching {
+            prefetching.fetchData { error in
+                completion(controller, error)
             }
-
-        case .main:
-            completion(viewControllerFactory.instantiateMainController(), nil)
-
-        case .revoked:
-            completion(viewControllerFactory.instantiateRevokedController(), nil)
-
-        case .outOfTime:
-            completion(viewControllerFactory.instantiateOutOfTimeController(), nil)
+        } else {
+            completion(controller, nil)
         }
     }
 }

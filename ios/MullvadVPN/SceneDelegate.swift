@@ -29,7 +29,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     private var isSceneConfigured = false
 
     private let rootContainer = RootContainerViewController()
-    private var sceneRouter: SceneRouter?
+    private var sceneRouter: AnySceneRouter<PhoneRoute>?
     private var sceneRouteEvaluator: PhoneRouteEvaluator?
 
     // Modal root container is used on iPad to present login, TOS, revoked device, device management
@@ -334,10 +334,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     }
 
     private func setupPhoneUI() {
-        sceneRouter = PhoneSceneRouter(
+        sceneRouter = AnySceneRouter(PhoneSceneRouter(
             rootContainer: rootContainer,
             viewControllerFactory: self
-        )
+        ))
         sceneRouteEvaluator = PhoneRouteEvaluator { [weak self] in
             return self?.tunnelManager.deviceState ?? .loggedOut
         }
@@ -1017,27 +1017,25 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
 
     // MARK: - ViewControllerFactory
 
-    func instantiateTOSController() -> TermsOfServiceViewController {
-        return makeTermsOfServiceController(completion: { _ in })
-    }
+    func instantiateViewController(for route: PhoneRoute) -> UIViewController {
+        switch route {
+        case .tos:
+            return makeTermsOfServiceController(completion: { _ in })
 
-    func instantiateLoginController() -> LoginViewController {
-        makeLoginController()
-    }
+        case let .devices(accountNumber):
+            return makeDevicesController(accountNumber: accountNumber)
 
-    func instantiateRevokedController() -> RevokedDeviceViewController {
-        return makeRevokedDeviceController()
-    }
+        case .login:
+            return makeLoginController()
 
-    func instantiateOutOfTimeController() -> OutOfTimeViewController {
-        return makeOutOfTimeViewController()
-    }
+        case .outOfTime:
+            return makeOutOfTimeViewController()
 
-    func instantiateMainController() -> ConnectViewController {
-        return makeConnectViewController()
-    }
+        case .revoked:
+            return makeRevokedDeviceController()
 
-    func instantiateDevicesController(accountNumber: String) -> DeviceManagementViewController {
-        return makeDevicesController(accountNumber: accountNumber)
+        case .main:
+            return makeConnectViewController()
+        }
     }
 }

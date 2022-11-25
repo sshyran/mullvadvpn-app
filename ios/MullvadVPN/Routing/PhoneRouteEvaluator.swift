@@ -8,7 +8,7 @@
 
 import Foundation
 
-struct PhoneRouteEvaluator {
+final class PhoneRouteEvaluator: RouteEvaluator {
     private let getDeviceState: () -> DeviceState
 
     var current: PhoneRoute?
@@ -17,7 +17,7 @@ struct PhoneRouteEvaluator {
         self.getDeviceState = getDeviceState
     }
 
-    mutating func nextAndUpdate() -> PhoneRoute? {
+    func nextAndUpdate() -> PhoneRoute? {
         if let route = next() {
             current = route
             return route
