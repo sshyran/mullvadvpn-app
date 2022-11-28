@@ -38,7 +38,11 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
 
     private var splitViewController: CustomSplitViewController?
     private var selectLocationViewController: SelectLocationViewController?
-    private var connectController: ConnectViewController?
+
+    private var connectController: ConnectViewController? {
+        return sceneRouter?.viewController(for: .main) as? ConnectViewController
+    }
+
     private weak var settingsNavController: SettingsNavigationController?
     private var lastLoginAction: LoginAction?
     private lazy var accountDataThrottling = AccountDataThrottling(tunnelManager: tunnelManager)
@@ -255,7 +259,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
 
         selectLocationViewController = selectLocationController
         self.splitViewController = splitViewController
-        self.connectController = connectController
+//        self.connectController = connectController
 
         rootContainer.setViewControllers([splitViewController], animated: false)
         showSplitViewMaster(tunnelManager.deviceState.isLoggedIn, animated: false)
@@ -656,18 +660,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
 
         switch UIDevice.current.userInterfaceIdiom {
         case .phone:
-            let connectController = makeConnectViewController()
-            self.connectController = connectController
-            var viewControllers = rootContainer.viewControllers
-            viewControllers.append(connectController)
-            rootContainer.setViewControllers(viewControllers, animated: true)
-            handleExpiredAccount()
+            if let route = self.sceneRouteEvaluator?.nextAndUpdate() {
+                self.sceneRouter?.present(route, completion: nil)
+                //handleExpiredAccount()
+            }
+
         case .pad:
             showSplitViewMaster(true, animated: true)
 
             controller.dismiss(animated: true) {
                 self.handleExpiredAccount()
             }
+
         default:
             fatalError()
         }
