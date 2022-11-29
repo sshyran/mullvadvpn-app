@@ -407,7 +407,7 @@ impl ConnectingState {
                 #[cfg(windows)]
                 if let Err(error) = shared_values
                     .split_tunnel
-                    .set_tunnel_addresses(Some(&metadata))
+                    .set_tunnel_addresses(&metadata)
                 {
                     log::error!(
                         "{}",
@@ -544,18 +544,6 @@ impl TunnelState for ConnectingState {
                 ErrorState::enter(shared_values, ErrorStateCause::TunnelParameterError(err))
             }
             Ok(tunnel_parameters) => {
-                #[cfg(windows)]
-                if let Err(error) = shared_values.split_tunnel.set_tunnel_addresses(None) {
-                    log::error!(
-                        "{}",
-                        error.display_chain_with_msg(
-                            "Failed to reset addresses in split tunnel driver"
-                        )
-                    );
-
-                    return ErrorState::enter(shared_values, ErrorStateCause::SplitTunnelError);
-                }
-
                 if let Err(error) = Self::set_firewall_policy(
                     shared_values,
                     &tunnel_parameters,

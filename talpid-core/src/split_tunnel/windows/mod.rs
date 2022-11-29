@@ -28,7 +28,6 @@ use talpid_windows_net::{get_ip_address_for_interface, AddressFamily};
 use windows_sys::Win32::Foundation::ERROR_OPERATION_ABORTED;
 
 const DRIVER_EVENT_BUFFER_SIZE: usize = 2048;
-const RESERVED_IP_V4: Ipv4Addr = Ipv4Addr::new(192, 0, 2, 123);
 
 /// Errors that may occur in [`SplitTunnel`].
 #[derive(err_derive::Error, Debug)]
@@ -616,21 +615,18 @@ impl SplitTunnel {
     }
 
     /// Instructs the driver to redirect traffic from sockets bound to 0.0.0.0, ::, or the
-    /// tunnel addresses (if any) to the default route.
-    pub fn set_tunnel_addresses(&mut self, metadata: Option<&TunnelMetadata>) -> Result<(), Error> {
+    /// tunnel addresses to the default route.
+    pub fn set_tunnel_addresses(&mut self, metadata: &TunnelMetadata) -> Result<(), Error> {
         let mut tunnel_ipv4 = None;
         let mut tunnel_ipv6 = None;
 
-        if let Some(metadata) = metadata {
-            for ip in &metadata.ips {
-                match ip {
-                    IpAddr::V4(address) => tunnel_ipv4 = Some(address.clone()),
-                    IpAddr::V6(address) => tunnel_ipv6 = Some(address.clone()),
-                }
+        for ip in &metadata.ips {
+            match ip {
+                IpAddr::V4(address) => tunnel_ipv4 = Some(address.clone()),
+                IpAddr::V6(address) => tunnel_ipv6 = Some(address.clone()),
             }
         }
 
-        let tunnel_ipv4 = Some(tunnel_ipv4.unwrap_or(RESERVED_IP_V4));
         let context_mutex = Arc::new(Mutex::new(
             SplitTunnelDefaultRouteChangeHandlerContext::new(
                 self.request_tx.clone(),
