@@ -36,23 +36,18 @@ case ${1-:""} in
         exit 1
 esac
 
-optional_gradle_cache_volume=${optional_gradle_cache_volume:-""}
 build_command+=" $*"
+optional_gradle_cache_volume=${optional_gradle_cache_volume:-""}
 
-log_info ""
-log_info "Runner   : $CONTAINER_RUNNER"
-log_info "Container: $container_image_name"
-log_info "Command  : $build_command"
-log_info ""
+container_run_command="$CONTAINER_RUNNER run --rm \
+-v $REPO_DIR:$REPO_MOUNT_TARGET:Z \
+-v $CARGO_TARGET_VOLUME_NAME:/root/.cargo/target:Z \
+-v $CARGO_REGISTRY_VOLUME_NAME:/root/.cargo/registry:Z \
+$optional_gradle_cache_volume \
+$container_image_name $build_command"
 
-container_command="$CONTAINER_RUNNER run --rm"
-container_command+=" -v $REPO_DIR:$REPO_MOUNT_TARGET:Z"
-container_command+=" -v $CARGO_TARGET_VOLUME_NAME:/root/.cargo/target:Z"
-container_command+=" -v $CARGO_REGISTRY_VOLUME_NAME:/root/.cargo/registry:Z"
-container_command+=" $optional_gradle_cache_volume"
-container_command+=" $container_image_name $build_command"
-
-log_info "Full container build command: $container_command"
+log_info "Command:"
+log_info "$container_run_command"
 log_info ""
 
-eval "$container_command"
+eval "$container_run_command"
