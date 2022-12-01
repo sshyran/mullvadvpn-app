@@ -46,8 +46,8 @@ container_run_command="$CONTAINER_RUNNER run --rm \
 $optional_gradle_cache_volume \
 $container_image_name $build_command"
 
-log_info "Command:"
+log "Starting containerized build using command:"
 log_info "$container_run_command"
-log_info ""
+log ""
 
 eval "$container_run_command"
