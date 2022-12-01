@@ -22,13 +22,13 @@ source "$REPO_DIR/scripts/utils/log"
 case ${1-:""} in
     linux)
         container_image_name=$(cat "$SCRIPT_DIR/linux-container-image.txt")
-        build_command="$REPO_MOUNT_TARGET/build.sh"
+        build_command=("$REPO_MOUNT_TARGET/build.sh")
         shift 1
     ;;
     android)
         container_image_name=$(cat "$SCRIPT_DIR/android-container-image.txt")
-        build_command="$REPO_MOUNT_TARGET/build-apk.sh --no-docker"
-        optional_gradle_cache_volume="-v $GRADLE_CACHE_VOLUME_NAME:/root/.gradle:Z"
+        build_command=("$REPO_MOUNT_TARGET/build-apk.sh" "--no-docker")
+        optional_gradle_cache_volume=(-v "$GRADLE_CACHE_VOLUME_NAME:/root/.gradle:Z")
         shift 1
     ;;
     *)
@@ -36,18 +36,12 @@ case ${1-:""} in
         exit 1
 esac
 
-build_command+=" $*"
-optional_gradle_cache_volume=${optional_gradle_cache_volume:-""}
+set -x
+exec "$CONTAINER_RUNNER" run --rm \
+    -v "$REPO_DIR:$REPO_MOUNT_TARGET:Z" \
+    -v "$CARGO_TARGET_VOLUME_NAME:/root/.cargo/target:Z" \
+    -v "$CARGO_REGISTRY_VOLUME_NAME:/root/.cargo/registry:Z" \
+    "${optional_gradle_cache_volume[@]}" \
+    -it "$container_image_name" \
+    "${build_command[@]}" "$@"
 
-container_run_command="$CONTAINER_RUNNER run --rm \
--v $REPO_DIR:$REPO_MOUNT_TARGET:Z \
--v $CARGO_TARGET_VOLUME_NAME:/root/.cargo/target:Z \
--v $CARGO_REGISTRY_VOLUME_NAME:/root/.cargo/registry:Z \
-$optional_gradle_cache_volume \
-$container_image_name $build_command"
-
-log "Starting containerized build using command:"
-log_info "$container_run_command"
-log ""
-
-eval "$container_run_command"
