@@ -28,6 +28,7 @@ case ${1-:""} in
     android)
         container_image_name=$(cat "$SCRIPT_DIR/android-container-image.txt")
         build_command="$REPO_MOUNT_TARGET/build-apk.sh --no-docker"
+        optional_gradle_cache_volume="-v $GRADLE_CACHE_VOLUME_NAME:/root/.gradle:Z"
         shift 1
     ;;
     *)
@@ -35,6 +36,7 @@ case ${1-:""} in
         exit 1
 esac
 
+optional_gradle_cache_volume=${optional_gradle_cache_volume:-""}
 build_command+=" $*"
 
 log_info ""
@@ -43,9 +45,14 @@ log_info "Container: $container_image_name"
 log_info "Command  : $build_command"
 log_info ""
 
-"$CONTAINER_RUNNER" run --rm \
-    -v "$REPO_DIR":"$REPO_MOUNT_TARGET":Z \
-    -v "$CARGO_TARGET_VOLUME_NAME":/root/.cargo/target:Z \
-    -v "$CARGO_REGISTRY_VOLUME_NAME":/root/.cargo/registry:Z \
-    -v "$GRADLE_CACHE_VOLUME_NAME":/root/.gradle:Z \
-    "$container_image_name" bash -c "$build_command"
+container_command="$CONTAINER_RUNNER run --rm"
+container_command+=" -v $REPO_DIR:$REPO_MOUNT_TARGET:Z"
+container_command+=" -v $CARGO_TARGET_VOLUME_NAME:/root/.cargo/target:Z"
+container_command+=" -v $CARGO_REGISTRY_VOLUME_NAME:/root/.cargo/registry:Z"
+container_command+=" $optional_gradle_cache_volume"
+container_command+=" $container_image_name $build_command"
+
+log_info "Full container build command: $container_command"
+log_info ""
+
+eval "$container_command"
