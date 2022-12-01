@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-# Helper script to build the Android app in a container.
-# Uses podman unless overridden using the environment
-# variable: CONTAINER_RUNNER
+# Builds the Android or Linux app in the current build container, as designated
+# by the *-container-image-tag.txt files. Uses podman unless overridden using
+# the environment variable `CONTAINER_RUNNER`. Note that this script uses named
+# docker volumes for caching between builds (see script for more details).
 
 set -eu
 
