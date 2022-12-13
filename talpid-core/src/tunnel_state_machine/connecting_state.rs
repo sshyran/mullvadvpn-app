@@ -405,10 +405,7 @@ impl ConnectingState {
             ),
             Some((TunnelEvent::InterfaceUp(metadata, allowed_tunnel_traffic), _done_tx)) => {
                 #[cfg(windows)]
-                if let Err(error) = shared_values
-                    .split_tunnel
-                    .set_tunnel_addresses(&metadata)
-                {
+                if let Err(error) = shared_values.split_tunnel.set_tunnel_addresses(&metadata) {
                     log::error!(
                         "{}",
                         error.display_chain_with_msg(

@@ -91,9 +91,7 @@ impl TunnelState for DisconnectedState {
         if let Err(error) = shared_values.split_tunnel.clear_tunnel_addresses() {
             log::error!(
                 "{}",
-                error.display_chain_with_msg(
-                    "Failed to clear addresses in split tunnel driver"
-                )
+                error.display_chain_with_msg("Failed to clear addresses in split tunnel driver")
             );
         }
 
