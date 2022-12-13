@@ -46,6 +46,31 @@ impl DisconnectedState {
         }
     }
 
+    #[cfg(windows)]
+    fn register_split_tunnel_addresses(
+        shared_values: &mut SharedTunnelStateValues,
+        should_reset_firewall: bool,
+    ) {
+        if should_reset_firewall && !shared_values.block_when_disconnected {
+            if let Err(error) = shared_values.split_tunnel.clear_tunnel_addresses() {
+                log::error!(
+                    "{}",
+                    error.display_chain_with_msg(
+                        "Failed to unregister addresses with split tunnel driver"
+                    )
+                );
+            }
+        } else {
+            if let Err(error) = shared_values.split_tunnel.set_tunnel_addresses(None) {
+                log::error!(
+                    "{}",
+                    error
+                        .display_chain_with_msg("Failed to reset addresses in split tunnel driver")
+                );
+            }
+        }
+    }
+
     fn reset_dns(shared_values: &mut SharedTunnelStateValues) {
         if let Err(error) = shared_values.dns_monitor.reset() {
             log::error!("{}", error.display_chain_with_msg("Unable to reset DNS"));
@@ -88,13 +113,7 @@ impl TunnelState for DisconnectedState {
         }
 
         #[cfg(windows)]
-        if let Err(error) = shared_values.split_tunnel.clear_tunnel_addresses() {
-            log::error!(
-                "{}",
-                error.display_chain_with_msg("Failed to clear addresses in split tunnel driver")
-            );
-        }
-
+        Self::register_split_tunnel_addresses(shared_values, should_reset_firewall);
         Self::set_firewall_policy(shared_values, should_reset_firewall);
         #[cfg(target_os = "linux")]
         shared_values.reset_connectivity_check();
@@ -148,6 +167,8 @@ impl TunnelState for DisconnectedState {
                 if shared_values.block_when_disconnected != block_when_disconnected {
                     shared_values.block_when_disconnected = block_when_disconnected;
                     Self::set_firewall_policy(shared_values, true);
+                    #[cfg(windows)]
+                    Self::register_split_tunnel_addresses(shared_values, true);
                     #[cfg(target_os = "macos")]
                     if block_when_disconnected {
                         if let Err(err) = Self::setup_local_dns_config(shared_values) {

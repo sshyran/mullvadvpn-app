@@ -84,6 +84,16 @@ impl TunnelState for ErrorState {
         shared_values: &mut SharedTunnelStateValues,
         block_reason: Self::Bootstrap,
     ) -> (TunnelStateWrapper, TunnelStateTransition) {
+        #[cfg(windows)]
+        if let Err(error) = shared_values.split_tunnel.set_tunnel_addresses(None) {
+            log::error!(
+                "{}",
+                error.display_chain_with_msg(
+                    "Failed to register addresses with split tunnel driver"
+                )
+            );
+        }
+
         #[cfg(target_os = "macos")]
         if !block_reason.prevents_filtering_resolver() {
             if let Err(err) = shared_values
