@@ -81,10 +81,6 @@ impl super::DnsMonitorT for DnsMonitor {
 
         let mut netsh_input = String::new();
 
-        // always reset both interfaces first (since we might use only ipv4 xor ipv6)
-        netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V4));
-        netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V6));
-
         for server in servers {
             let index;
 
@@ -101,6 +97,13 @@ impl super::DnsMonitorT for DnsMonitor {
             } else {
                 netsh_input.push_str(&create_netsh_add_command(interface_index, server));
             }
+        }
+
+        if ipv4_index == 0 {
+            netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V4));
+        }
+        if ipv6_index == 0 {
+            netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V6));
         }
 
         run_netsh_with_timeout(netsh_input, NETSH_TIMEOUT)?;
@@ -181,7 +184,7 @@ fn create_netsh_add_command(interface_index: u32, server: &IpAddr) -> String {
     // netsh interface ipv4 add dnsservers name="Mullvad" address=10.64.0.2 validate=no
 
     let interface_type = if server.is_ipv4() { "ipv4" } else { "ipv6" };
-    format!("interface {interface_type} add dnsservers name={interface_index} source=static address={server} validate=no\r\n")
+    format!("interface {interface_type} add dnsservers name={interface_index} address={server} validate=no\r\n")
 }
 
 fn create_netsh_flush_command(interface_index: u32, ip_version: IpVersion) -> String {
