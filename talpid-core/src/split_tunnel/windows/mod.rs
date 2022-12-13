@@ -190,7 +190,7 @@ impl SplitTunnel {
         let excluded_processes = Arc::new(RwLock::new(HashMap::new()));
 
         let (request_tx, handle) =
-            Self::spawn_request_thread(resource_dir, volume_update_rx, excluded_processes.clone())?;
+            Self::spawn_request_thread(resource_dir, volume_update_rx, excluded_processes.clone(), daemon_tx.clone())?;
 
         let (event_thread, quit_event) =
             Self::spawn_event_listener(handle, excluded_processes.clone())?;
@@ -410,6 +410,7 @@ impl SplitTunnel {
         resource_dir: PathBuf,
         volume_update_rx: mpsc::UnboundedReceiver<()>,
         excluded_processes: Arc<RwLock<HashMap<usize, ExcludedProcess>>>,
+        daemon_tx: Weak<mpsc::UnboundedSender<TunnelCommand>>,
     ) -> Result<(RequestTx, Arc<driver::DeviceHandle>), Error> {
         let (tx, rx): (RequestTx, _) = sync_mpsc::channel();
         let (init_tx, init_rx) = sync_mpsc::channel();
@@ -534,7 +535,20 @@ impl SplitTunnel {
                         log_response = Some(error.0);
                     }
                 } else {
+                    let response_is_err = response.is_err();
                     log_response = Some(response);
+
+                    // If a command fails and we have no way of handling it, notify the tunnel state
+                    // machine. In particular, this will occur when registering
+                    // IP addresses in the default route callback
+                    if response_is_err {
+                        if let Some(daemon_tx) = daemon_tx.upgrade() {
+                            log::debug!("Sending tunnel command to enter error state");
+                            let _ = daemon_tx.unbounded_send(TunnelCommand::Block(
+                                ErrorStateCause::SplitTunnelError,
+                            ));
+                        }
+                    }
                 }
                 if let Some(Err(error)) = log_response {
                     log::error!(
