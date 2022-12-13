@@ -404,6 +404,8 @@ impl ConnectingState {
                 AfterDisconnect::Block(ErrorStateCause::AuthFailed(reason)),
             ),
             Some((TunnelEvent::InterfaceUp(metadata, allowed_tunnel_traffic), _done_tx)) => {
+                // NOTE: It is crucial to set the correct tunnel IP before allowing any traffic into
+                // the tunnel, as leaks into the tunnel are possible otherwise.
                 #[cfg(windows)]
                 if let Err(error) = shared_values
                     .split_tunnel
