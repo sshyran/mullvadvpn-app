@@ -85,7 +85,9 @@ impl TunnelState for ErrorState {
         block_reason: Self::Bootstrap,
     ) -> (TunnelStateWrapper, TunnelStateTransition) {
         #[cfg(windows)]
-        if !block_reason.prevents_split_tunneling() {
+        if !block_reason.prevents_split_tunneling()
+            && !shared_values.split_tunnel.has_tunnel_addresses()
+        {
             if let Err(error) = shared_values.split_tunnel.set_tunnel_addresses(None) {
                 log::error!(
                     "{}",
