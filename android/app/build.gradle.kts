@@ -34,14 +34,6 @@ android {
         versionCode = generateVersionCode()
         versionName = generateVersionName()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        val alwaysShowChangelog = gradleLocalProperties(rootProject.projectDir)
-            .getProperty("ALWAYS_SHOW_CHANGELOG") ?: "false"
-        buildConfigField(
-            type = "boolean",
-            name = "ALWAYS_SHOW_CHANGELOG",
-            value = alwaysShowChangelog
-        )
     }
 
     if (keystorePropertiesFile.exists()) {
@@ -150,6 +142,17 @@ android {
                 "META-INF/LICENSE-notice.md"
             )
         }
+    }
+
+    applicationVariants.configureEach {
+        val alwaysShowChangelog = gradleLocalProperties(rootProject.projectDir)
+            .getProperty("ALWAYS_SHOW_CHANGELOG") ?: "false"
+
+        buildConfigField(
+            "boolean",
+            "ALWAYS_SHOW_CHANGELOG",
+            alwaysShowChangelog
+        )
     }
 
     project.tasks.preBuild.dependsOn("ensureJniDirectoryExist")
