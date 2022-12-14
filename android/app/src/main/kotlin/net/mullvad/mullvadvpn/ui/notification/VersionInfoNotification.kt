@@ -5,13 +5,17 @@ import net.mullvad.mullvadvpn.R
 import net.mullvad.mullvadvpn.ui.VersionInfo
 
 class VersionInfoNotification(
+    val isEnabled: Boolean,
     context: Context
 ) : NotificationWithUrl(context, R.string.download_url) {
     private val unsupportedVersion = context.getString(R.string.unsupported_version)
     private val updateAvailable = context.getString(R.string.update_available)
 
     fun updateVersionInfo(versionInfo: VersionInfo) {
-        if (versionInfo.isOutdated || !versionInfo.isSupported) {
+        val shouldShowNotification =
+            isEnabled && (versionInfo.isOutdated || !versionInfo.isSupported)
+
+        if (shouldShowNotification) {
             if (versionInfo.upgradeVersion != null) {
                 val template: Int
 
