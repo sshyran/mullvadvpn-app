@@ -76,33 +76,33 @@ impl super::DnsMonitorT for DnsMonitor {
 
         self.current_index = Some(interface_index);
 
-        let mut ipv4_index = 0;
-        let mut ipv6_index = 0;
+        let mut added_ipv4_server = false;
+        let mut added_ipv6_server = false;
 
         let mut netsh_input = String::new();
 
         for server in servers {
-            let index;
+            let is_additional_server;
 
             if server.is_ipv4() {
-                index = ipv4_index;
-                ipv4_index += 1;
+                is_additional_server = added_ipv4_server;
+                added_ipv4_server = true;
             } else {
-                index = ipv6_index;
-                ipv6_index += 1;
+                is_additional_server = added_ipv6_server;
+                added_ipv6_server = true;
             };
 
-            if index == 0 {
-                netsh_input.push_str(&create_netsh_set_command(interface_index, server));
-            } else {
+            if is_additional_server {
                 netsh_input.push_str(&create_netsh_add_command(interface_index, server));
+            } else {
+                netsh_input.push_str(&create_netsh_set_command(interface_index, server));
             }
         }
 
-        if ipv4_index == 0 {
+        if !added_ipv4_server {
             netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V4));
         }
-        if ipv6_index == 0 {
+        if !added_ipv6_server {
             netsh_input.push_str(&create_netsh_flush_command(interface_index, IpVersion::V6));
         }
 
