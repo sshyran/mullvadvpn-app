@@ -51,9 +51,9 @@ public func initLoggingSystem(
     LoggingSystem.bootstrap { label -> LogHandler in
         var logHandlers: [LogHandler] = []
 
-        #if DEBUG
+        //#if DEBUG
         logHandlers.append(OSLogHandler(subsystem: bundleIdentifier, category: label))
-        #endif
+        //#endif
 
         if !streams.isEmpty {
             logHandlers.append(CustomFormatLogHandler(label: label, streams: streams))
