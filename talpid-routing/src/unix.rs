@@ -22,9 +22,9 @@ use std::net::IpAddr;
 #[allow(clippy::module_inception)]
 #[cfg(target_os = "macos")]
 #[path = "macos.rs"]
-mod imp;
+pub mod imp;
 #[cfg(target_os = "macos")]
-pub use imp::listen_for_default_route_changes;
+pub use imp::{listen_for_default_route_changes};
 
 #[allow(clippy::module_inception)]
 #[cfg(target_os = "linux")]

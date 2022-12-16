@@ -16,6 +16,10 @@ use talpid_types::net::IpVersion;
 use tokio::{io::AsyncBufReadExt, process::Command};
 use tokio_stream::wrappers::LinesStream;
 
+
+pub mod watch;
+mod route_watch;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// Errors that can happen in the macOS routing integration.

@@ -30,6 +30,9 @@ netlink-sys = "0.8.3"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 tokio-stream = { version = "0.1", features = ["io-util"] }
+nix = { path = "../../src/nix-rs", feautres = ["socket"] }
+libc = "0.2"
+bitflags = "1.2"
 
 
 [target.'cfg(windows)'.dependencies]
