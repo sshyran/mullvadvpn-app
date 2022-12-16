@@ -72,6 +72,7 @@ pub fn test_remove_route_inner() {
         data::RouteMessage::DeleteRoute(route) => {
             let addrs = route.route_addrs().collect::<Vec<_>>();
             assert_eq!(addrs.len(), 2);
+            println!("even more insanity");
         }
         unexpected => {
             panic!("unexpected type of route message {:?}", unexpected);
