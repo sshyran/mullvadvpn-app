@@ -13,6 +13,51 @@ import Operations
 import RelayCache
 import UIKit
 
+final class AppCoordinator: PresentationCoordinator {
+    var childCoordinators: [Coordinator] = []
+    var rootViewController = UIViewController()
+
+//    private let dataService = DataService.shared
+
+    init(window: UIWindow) {
+        window.rootViewController = rootViewController
+        window.makeKeyAndVisible()
+    }
+
+    func start() {
+//        dataService.fetchUserState { [weak self] isFirstTimeUser in
+//            self?.route(isFirstTimeUser: isFirstTimeUser)
+//        }
+    }
+}
+
+// MARK: - Routing
+private extension AppCoordinator {
+    func route(isFirstTimeUser: Bool) {
+//        if isFirstTimeUser {
+//            let onboardingCoordinator = OnboardingCoordinator()
+//            onboardingCoordinator.delegate = self
+//            presentCoordinator(onboardingCoordinator, animated: false)
+//        } else {
+//            let examplesCoordinator = ExamplesCoordinator()
+//            addChildCoordinator(examplesCoordinator)
+//            examplesCoordinator.start()
+//            rootViewController.set(childViewController: examplesCoordinator.rootViewController)
+//        }
+    }
+}
+
+//// MARK: - Onboarding Coordinator Delegate
+//extension AppCoordinator: OnboardingCoordinatorDelegate {
+//    func onboardingCoordinatorDidFinish(_ coordinator: OnboardingCoordinator) {
+//        let isFirstTimeUser = false
+//        dataService.set(isFirstTimeUser: isFirstTimeUser)
+//        route(isFirstTimeUser: isFirstTimeUser)
+//
+//        dismissCoordinator(coordinator, animated: true)
+//    }
+//}
+
 class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDelegate,
     UIAdaptivePresentationControllerDelegate, RootContainerViewControllerDelegate,
     LoginViewControllerDelegate, DeviceManagementViewControllerDelegate,
@@ -27,7 +72,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     private var privacyOverlayWindow: UIWindow?
     private var isSceneConfigured = false
 
-    private let rootContainer = RootContainerViewController()
+    private lazy var rootContainer: RootContainerViewController = {
+        return RootContainerViewController()
+    }()
 
     // Modal root container is used on iPad to present login, TOS, revoked device, device management
     // view controllers above `rootContainer` which only contains split controller.
@@ -41,6 +88,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
 
     private var accountDataThrottling: AccountDataThrottling?
     private var deviceDataThrottling: DeviceDataThrottling?
+
+    var appCoordinator: AppCoordinator?
 
     private var outOfTimeTimer: Timer?
 
