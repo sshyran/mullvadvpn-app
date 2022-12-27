@@ -55,12 +55,21 @@ enum Route: Equatable, Hashable {
 
 protocol Routing {}
 
+struct RoutingCondition {
+    var condition: AppRouter.Condition
+    var priority: Int?
+}
+
+private let navigationDefaultPriority = 0
+private let modalDefaultPriority = 1
+private let rootDefaultPriority = Int.max
+
 final class AppRouter: Routing {
     var current: Route? {
         (container.topViewController as? AnyRoutable)?.route
     }
 
-    private typealias Condition = (_ current: Route?) -> Bool
+    typealias Condition = (_ current: Route?) -> Bool
 
     private var pendingRoutes: [PendingRoute] = []
 
@@ -118,20 +127,20 @@ final class AppRouter: Routing {
 
     func setRoot(
         to route: AnyRoutable,
-        with condition: ((_ current: Route?) -> Bool)? = nil,
+        with condition: RoutingCondition? = nil,
         animated: Bool = true,
         _ completionHandler: (() -> Void)?
     ) {
         if let condition = condition {
-            if condition(current) {
+            if condition.condition(current) {
                 _setRoutes([route], animated: animated, completionHandler)
             } else {
                 pendingRoutes.append(
                     PendingRoute(
                         route: route,
-                        condition: condition,
+                        condition: condition.condition,
                         navigationType: .root,
-                        priority: .max
+                        priority: condition.priority ?? rootDefaultPriority
                     )
                 )
             }
@@ -142,26 +151,15 @@ final class AppRouter: Routing {
 
     func setRoutes(
         _ routes: [AnyRoutable],
-        with condition: ((_ current: Route?) -> Bool)? = nil,
         animated: Bool = true,
         _ completionHandler: (() -> Void)?
     ) {
-        if let condition = condition {
-            if condition(current) {
-                _setRoutes(routes, animated: animated, completionHandler)
-            } else {
-//                pendingRoutes.append(
-//                    PendingRoute(route: route, condition: condition, navigationType: .root, priority: .max)
-//                )
-            }
-        } else {
-            _setRoutes(routes, animated: animated, completionHandler)
-        }
+        _setRoutes(routes, animated: animated, completionHandler)
     }
 
     func navigate(
         to route: AnyRoutable,
-        with condition: ((_ current: Route?) -> Bool)? = nil,
+        with condition: RoutingCondition? = nil,
         isForced: Bool = false,
         animated: Bool = true
     ) {
@@ -169,15 +167,15 @@ final class AppRouter: Routing {
             _navigate(route, animated: animated)
         } else {
             if let condition = condition {
-                if condition(current) {
+                if condition.condition(current) {
                     _navigate(route, animated: animated)
                 } else {
                     pendingRoutes.append(
                         PendingRoute(
                             route: route,
-                            condition: condition,
+                            condition: condition.condition,
                             navigationType: .navigate,
-                            priority: 1
+                            priority: condition.priority ?? navigationDefaultPriority
                         )
                     )
                 }
@@ -189,13 +187,22 @@ final class AppRouter: Routing {
 
     func present(
         route: AnyRoutable,
-        with condition: ((_ current: Route?) -> Bool)? = nil,
+        with condition: RoutingCondition? = nil,
         animated: Bool = true
     ) {
         if let condition = condition {
-            if condition(current) {
+            if condition.condition(current) {
                 _present(route, animated: animated)
-            } else {}
+            } else {
+                pendingRoutes.append(
+                    PendingRoute(
+                        route: route,
+                        condition: condition.condition,
+                        navigationType: .modal,
+                        priority: condition.priority ?? modalDefaultPriority
+                    )
+                )
+            }
         } else {
             _present(route, animated: animated)
         }
@@ -223,7 +230,7 @@ final class AppRouter: Routing {
         pendingRoutes.append(
             PendingRoute(route: route, condition: { current in
                 return current == after.route
-            }, navigationType: .modal, priority: 1)
+            }, navigationType: .modal, priority: .max)
         )
     }
 
@@ -231,7 +238,7 @@ final class AppRouter: Routing {
         pendingRoutes.append(
             PendingRoute(route: route, condition: { current in
                 return current == after.route
-            }, navigationType: .navigate, priority: 1)
+            }, navigationType: .navigate, priority: .max)
         )
     }
 
@@ -280,7 +287,9 @@ final class AppRouter: Routing {
 
     private func _present(_ viewController: AnyRoutable, animated: Bool) {
         dismiss(animated: animated) { [weak self] in
-            self?.container.present(viewController, animated: animated)
+            self?.container.present(viewController, animated: animated) { [weak self] in
+                self?.checkPendingRoutes()
+            }
         }
     }
 
