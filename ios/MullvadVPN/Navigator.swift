@@ -17,7 +17,7 @@ import UIKit
 ///  a completion handler for when controllers are popped from the stack.
 ///
 ///  For a concrete instance, use a `Navigator`.
-public protocol NavigatorType {
+public protocol NavigatorType: AnyObject {
     /** Pops all the view controllers on the stack except the root view controller and updates the display. */
     @discardableResult
     func popToRootViewController(animated: Bool) -> [UIViewController]?

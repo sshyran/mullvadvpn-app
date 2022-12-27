@@ -32,6 +32,7 @@ final class AppCoordinator: PresentationCoordinator {
 }
 
 // MARK: - Routing
+
 private extension AppCoordinator {
     func route(isFirstTimeUser: Bool) {
 //        if isFirstTimeUser {
@@ -48,7 +49,7 @@ private extension AppCoordinator {
 }
 
 //// MARK: - Onboarding Coordinator Delegate
-//extension AppCoordinator: OnboardingCoordinatorDelegate {
+// extension AppCoordinator: OnboardingCoordinatorDelegate {
 //    func onboardingCoordinatorDidFinish(_ coordinator: OnboardingCoordinator) {
 //        let isFirstTimeUser = false
 //        dataService.set(isFirstTimeUser: isFirstTimeUser)
@@ -56,7 +57,7 @@ private extension AppCoordinator {
 //
 //        dismissCoordinator(coordinator, animated: true)
 //    }
-//}
+// }
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDelegate,
     UIAdaptivePresentationControllerDelegate, RootContainerViewControllerDelegate,
@@ -72,9 +73,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate, UISplitViewControllerDe
     private var privacyOverlayWindow: UIWindow?
     private var isSceneConfigured = false
 
-    private lazy var rootContainer: RootContainerViewController = {
-        return RootContainerViewController()
-    }()
+    private lazy var rootContainer = RootContainerViewController()
 
     // Modal root container is used on iPad to present login, TOS, revoked device, device management
     // view controllers above `rootContainer` which only contains split controller.

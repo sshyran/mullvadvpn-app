@@ -12,63 +12,85 @@ import UIKit
 protocol RouteEvaluating {
     associatedtype Route
 
-    func evaluate(current: Route?, dependencyHandler: DependencyLocator) -> Route
+    func evaluate(current: Route?) -> Route
 }
 
-protocol Routable: UIViewController {
-    associatedtype Route
+typealias AnyRoutable = (any UIViewController & Routable)
 
-    var Route: Route { get }
-    static func initialize(for: UIUserInterfaceIdiom) -> UIViewController
+protocol Routable: UIViewController, Equatable {
+    var route: Route { get }
+
+    init(
+        for interface: UIUserInterfaceIdiom,
+        with dependencyHandler: DependencyLocator
+    )
 }
 
 enum Route: Equatable, Hashable {
     case tos
     case login
     case main
-    case devices(interactor: DeviceManagementInteractor)
-    case revoked(interactor: RevokedDeviceInteractor)
-    case outOfTime(interactor: OutOfTimeInteractor)
+    case devices
+    case revoked
+    case outOfTime
 
-    static func == (lhs: Route, rhs: Route) -> Bool {
-        switch (lhs, rhs) {
-        case (.tos, .tos),
-            (.login, .login),
-            (.main, .main),
-            (.devices, .devices),
-            (.revoked, .revoked),
-            (.outOfTime, .outOfTime):
-            return true
-
-        default: return false
-        }
-    }
-
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(self)
+    var routable: any Routable.Type {
+        NewViewController.self
+//        switch route {
+//        case .tos:
+//            return TermsOfServiceViewController.self
+//        case .login:
+//            return LoginViewController.self
+//        case .main:
+//            return UIViewController()
+//        case let .devices(interactor):
+//            return DeviceManagementViewController.self
+//        case let .revoked(interactor):
+//            return RevokedDeviceViewController.self
+//        case let .outOfTime(interactor):
+//            return OutOfTimeViewController.self
+//        }
     }
 }
 
-protocol Routing {
-
-}
+protocol Routing {}
 
 final class AppRouter: Routing {
-    var current: Route?
+    var current: Route? {
+        (container.topViewController as? AnyRoutable)?.route
+    }
 
-    var routes: [any Routable] = []
+    private typealias Condition = (_ current: Route?) -> Bool
+
+    private var pendingRoutes: [PendingRoute] = []
+
+    private struct PendingRoute {
+        let route: AnyRoutable
+        let condition: Condition
+        let navigationType: NavigationType
+        let priority: Int
+
+        enum NavigationType {
+            case root
+            case navigate
+            case modal
+        }
+    }
 
     private let rootContainer: RootContainerViewController
 
     private let modalContainer: RootContainerViewController
-
-    private let dependencyHandler: DependencyLocator
 
     private let evaluator = RouteEvaluator {
         (try? SettingsManager.readDeviceState()) ?? .loggedOut
     }
 
     private let isOnIPad: Bool
+
+    private var userInterfaceIdiom: UIUserInterfaceIdiom
+
+    private lazy var adaptivePresentationController =
+        AdaptivePresentationController(rootContainer: rootContainer)
 
     private var presentedViewController: UIViewController? {
         if isOnIPad {
@@ -78,70 +100,163 @@ final class AppRouter: Routing {
         return rootContainer.presentingViewController
     }
 
+    private var container: RootContainerViewController {
+        isOnIPad ? modalContainer : rootContainer
+    }
+
     init(
         rootContainer: RootContainerViewController,
         modalContainer: RootContainerViewController,
-        dependencyHandler: DependencyLocator
+        userInterfaceIdiom: UIUserInterfaceIdiom = UIDevice.current.userInterfaceIdiom
     ) {
         self.rootContainer = rootContainer
         self.modalContainer = modalContainer
-        self.dependencyHandler = dependencyHandler
+        self.userInterfaceIdiom = userInterfaceIdiom
 
-        isOnIPad = UIDevice.current.userInterfaceIdiom == .pad
+        isOnIPad = userInterfaceIdiom == .pad
     }
-//
-//    enum Condition {
-//        case constant(Bool)
-//        case completion((_ current: Route?) -> Bool)
-//    }
+
+    func setRoot(
+        to route: AnyRoutable,
+        with condition: ((_ current: Route?) -> Bool)? = nil,
+        animated: Bool = true,
+        _ completionHandler: (() -> Void)?
+    ) {
+        if let condition = condition {
+            if condition(current) {
+                _setRoutes([route], animated: animated, completionHandler)
+            } else {
+                pendingRoutes.append(
+                    PendingRoute(
+                        route: route,
+                        condition: condition,
+                        navigationType: .root,
+                        priority: .max
+                    )
+                )
+            }
+        } else {
+            _setRoutes([route], animated: animated, completionHandler)
+        }
+    }
+
+    func setRoutes(
+        _ routes: [AnyRoutable],
+        with condition: ((_ current: Route?) -> Bool)? = nil,
+        animated: Bool = true,
+        _ completionHandler: (() -> Void)?
+    ) {
+        if let condition = condition {
+            if condition(current) {
+                _setRoutes(routes, animated: animated, completionHandler)
+            } else {
+//                pendingRoutes.append(
+//                    PendingRoute(route: route, condition: condition, navigationType: .root, priority: .max)
+//                )
+            }
+        } else {
+            _setRoutes(routes, animated: animated, completionHandler)
+        }
+    }
 
     func navigate(
-        to route: Route,
+        to route: AnyRoutable,
         with condition: ((_ current: Route?) -> Bool)? = nil,
         isForced: Bool = false,
         animated: Bool = true
     ) {
         if isForced {
-            rootContainer.pushViewController(Self.createViewController(from: route), animated: animated)
+            _navigate(route, animated: animated)
         } else {
             if let condition = condition {
                 if condition(current) {
-                    rootContainer.pushViewController(Self.createViewController(from: route), animated: animated)
+                    _navigate(route, animated: animated)
                 } else {
-                    // TODO: register it to be represented when the condition passes.
+                    pendingRoutes.append(
+                        PendingRoute(
+                            route: route,
+                            condition: condition,
+                            navigationType: .navigate,
+                            priority: 1
+                        )
+                    )
                 }
             } else {
-                rootContainer.pushViewController(Self.createViewController(from: route), animated: animated)
+                _navigate(route, animated: animated)
             }
         }
     }
 
-    func _navigate() {
-
+    func present(
+        route: AnyRoutable,
+        with condition: ((_ current: Route?) -> Bool)? = nil,
+        animated: Bool = true
+    ) {
+        if let condition = condition {
+            if condition(current) {
+                _present(route, animated: animated)
+            } else {}
+        } else {
+            _present(route, animated: animated)
+        }
     }
 
-    func present(route: Route, animated: Bool = true) {
+    func dismiss(animated: Bool = true, completion: (() -> Void)? = nil) {
         if let presentedViewController = presentedViewController {
-            presentedViewController.dismiss(animated: animated) { [weak self] in
-                self?._present(Self.createViewController(from: route), animated: animated)
+            presentedViewController.dismiss(animated: animated) {
+                completion?()
             }
         } else {
-            _present(Self.createViewController(from: route), animated: animated)
+            completion?()
         }
     }
 
-    private func _present(_ view: UIViewController, animated: Bool) {
-        if isOnIPad {
-            modalContainer.present(view, animated: animated)
-        } else {
-            rootContainer.present(view, animated: animated)
+    func popViewController(animated: Bool = true, completion: (() -> Void)? = nil) {
+        container.popViewController(animated: animated, completion: completion)
+    }
+
+    func popToRootViewController(animated: Bool = true, completion: (() -> Void)? = nil) {
+        container.popViewController(animated: animated, completion: completion)
+    }
+
+    func present(route: AnyRoutable, after: AnyRoutable) {
+        pendingRoutes.append(
+            PendingRoute(route: route, condition: { current in
+                return current == after.route
+            }, navigationType: .modal, priority: 1)
+        )
+    }
+
+    func navigateTo(route: AnyRoutable, after: AnyRoutable) {
+        pendingRoutes.append(
+            PendingRoute(route: route, condition: { current in
+                return current == after.route
+            }, navigationType: .navigate, priority: 1)
+        )
+    }
+
+    private func checkPendingRoutes() {
+        if let index = pendingRoutes
+            .sorted(by: { $0.priority > $1.priority })
+            .firstIndex(where: { $0.condition(current) })
+        {
+            let pendingRoute = pendingRoutes[index]
+
+            switch pendingRoute.navigationType {
+            case .root:
+                break
+            case .navigate:
+                navigate(to: pendingRoute.route)
+            case .modal:
+                present(route: pendingRoute.route)
+            }
         }
     }
 
     private func presentModalRootContainerIfNeeded(animated: Bool) {
         modalContainer.preferredContentSize = CGSize(width: 480, height: 600)
         modalContainer.modalPresentationStyle = .formSheet
-//        modalContainer.presentationController?.delegate = self
+        modalContainer.presentationController?.delegate = adaptivePresentationController
         modalContainer.isModalInPresentation = true
 
         if modalContainer.presentingViewController == nil {
@@ -149,121 +264,141 @@ final class AppRouter: Routing {
         }
     }
 
-    // TODO: {}
-//  push and pop
-//  Create route array / registery
-
-    // dismiss all before push
-
-//#error("Make it some one elses reponsibility to create view controllers")
-//private func makeTermsOfServiceController(
-//    completion: @escaping (UIViewController) -> Void
-//) -> TermsOfServiceViewController {
-//    let controller = TermsOfServiceViewController()
-//
-//    if UIDevice.current.userInterfaceIdiom == .pad {
-//        controller.modalPresentationStyle = .formSheet
-//        controller.isModalInPresentation = true
-//    }
-//
-//    controller.completionHandler = { controller in
-//        TermsOfService.setAgreed()
-//        completion(controller)
-//    }
-//
-//    return controller
-//}
-
-    func showAfter(route: Route) {
-
+    private func _setRoutes(
+        _ routes: [AnyRoutable],
+        animated: Bool,
+        _ completionHandler: (() -> Void)?
+    ) {
+        dismiss(animated: animated) { [weak self] in
+            self?.container.setViewControllers(
+                routes,
+                animated: animated,
+                completion: completionHandler
+            )
+        }
     }
 
-    func navigateToNext() {
-        let deviceState = (try? SettingsManager.readDeviceState()) ?? .loggedOut
-        let evaluator = RouteEvaluator(getDeviceState: { deviceState })
-
-        navigate(
-            to: evaluator.evaluate(current: current, dependencyHandler: dependencyHandler)
-        )
+    private func _present(_ viewController: AnyRoutable, animated: Bool) {
+        dismiss(animated: animated) { [weak self] in
+            self?.container.present(viewController, animated: animated)
+        }
     }
 
-    private static func createViewController(from route: Route) -> UIViewController {
-        switch route {
-        case .tos:
-            return TermsOfServiceViewController()
-        case .login:
-            return LoginViewController()
-        case .main:
-            return UIViewController()
-        case let .devices(interactor):
-            return DeviceManagementViewController(interactor: interactor)
-        case let .revoked(interactor):
-            return RevokedDeviceViewController(interactor: interactor)
-        case let .outOfTime(interactor):
-            return OutOfTimeViewController(interactor: interactor)
+    private func _navigate(_ route: any Routable, animated: Bool) {
+        let checkPendingRoutesClosure: () -> Void = { [weak self] in
+            self?.checkPendingRoutes()
+        }
+
+        if isOnIPad {
+            if modalContainer.isBeingPresented {
+                modalContainer.pushViewController(
+                    route,
+                    animated: animated,
+                    completion: checkPendingRoutesClosure
+                )
+            } else {
+                rootContainer.pushViewController(
+                    route,
+                    animated: animated,
+                    completion: checkPendingRoutesClosure
+                )
+            }
+        } else {
+            dismiss(animated: animated) { [weak self] in
+                self?.rootContainer.pushViewController(
+                    route,
+                    animated: animated,
+                    completion: checkPendingRoutesClosure
+                )
+            }
         }
     }
 }
 
-/*
- // MARK: - UIAdaptivePresentationControllerDelegate
+class NewViewController: UIViewController, Routable {
+    required init(for interface: UIUserInterfaceIdiom, with dependencyHandler: DependencyLocator) {
+        super.init(nibName: nil, bundle: nil)
 
- func adaptivePresentationStyle(
-     for controller: UIPresentationController,
-     traitCollection: UITraitCollection
- ) -> UIModalPresentationStyle {
-     if controller.presentedViewController is RootContainerViewController {
-         return traitCollection.horizontalSizeClass == .regular ? .formSheet : .fullScreen
-     } else {
-         return .none
-     }
- }
+        if interface == .pad {
+            modalPresentationStyle = .formSheet
+            isModalInPresentation = true
+        }
+    }
 
- func presentationController(
-     _ presentationController: UIPresentationController,
-     willPresentWithAdaptiveStyle style: UIModalPresentationStyle,
-     transitionCoordinator: UIViewControllerTransitionCoordinator?
- ) {
-     let actualStyle: UIModalPresentationStyle
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
 
-     // When adaptive presentation is not changing, the `style` is set to `.none`
-     if case .none = style {
-         actualStyle = presentationController.presentedViewController.modalPresentationStyle
-     } else {
-         actualStyle = style
-     }
+    var route: Route {
+        .tos
+    }
+}
 
-     // Force hide header bar in .formSheet presentation and show it in .fullScreen presentation
-     if let wrapper = presentationController
-         .presentedViewController as? RootContainerViewController
-     {
-         wrapper.setOverrideHeaderBarHidden(actualStyle == .formSheet, animated: false)
-     }
+private final class AdaptivePresentationController: NSObject,
+    UIAdaptivePresentationControllerDelegate
+{
+    private let rootContainer: RootContainerViewController
 
-     guard actualStyle == .formSheet else {
-         // Move the settings button back into header bar
-         rootContainer.removeSettingsButtonFromPresentationContainer()
+    init(rootContainer: RootContainerViewController) {
+        self.rootContainer = rootContainer
+    }
 
-         return
-     }
+    func adaptivePresentationStyle(
+        for controller: UIPresentationController,
+        traitCollection: UITraitCollection
+    ) -> UIModalPresentationStyle {
+        if controller.presentedViewController is RootContainerViewController {
+            return traitCollection.horizontalSizeClass == .regular ? .formSheet : .fullScreen
+        } else {
+            return .none
+        }
+    }
 
-     // Add settings button into the modal container to make it accessible by user
-     if let transitionCoordinator = transitionCoordinator {
-         transitionCoordinator.animate { context in
-             self.rootContainer.addSettingsButtonToPresentationContainer(context.containerView)
-         }
-     } else if let containerView = presentationController.containerView {
-         rootContainer.addSettingsButtonToPresentationContainer(containerView)
-     } else {
-         logger.warning(
-             """
-             Cannot obtain the containerView for presentation controller when presenting with \
-             adaptive style \(actualStyle.rawValue) and missing transition coordinator.
-             """
-         )
-     }
- }
- */
+    func presentationController(
+        _ presentationController: UIPresentationController,
+        willPresentWithAdaptiveStyle style: UIModalPresentationStyle,
+        transitionCoordinator: UIViewControllerTransitionCoordinator?
+    ) {
+        let actualStyle: UIModalPresentationStyle
+
+        // When adaptive presentation is not changing, the `style` is set to `.none`
+        if case .none = style {
+            actualStyle = presentationController.presentedViewController.modalPresentationStyle
+        } else {
+            actualStyle = style
+        }
+
+        // Force hide header bar in .formSheet presentation and show it in .fullScreen presentation
+        if let wrapper = presentationController
+            .presentedViewController as? RootContainerViewController
+        {
+            wrapper.setOverrideHeaderBarHidden(actualStyle == .formSheet, animated: false)
+        }
+
+        guard actualStyle == .formSheet else {
+            // Move the settings button back into header bar
+            rootContainer.removeSettingsButtonFromPresentationContainer()
+
+            return
+        }
+
+        // Add settings button into the modal container to make it accessible by user
+        if let transitionCoordinator = transitionCoordinator {
+            transitionCoordinator.animate { context in
+                self.rootContainer.addSettingsButtonToPresentationContainer(context.containerView)
+            }
+        } else if let containerView = presentationController.containerView {
+            rootContainer.addSettingsButtonToPresentationContainer(containerView)
+        } else {
+//            logger.warning(
+//                """
+//                Cannot obtain the containerView for presentation controller when presenting with \
+//                adaptive style \(actualStyle.rawValue) and missing transition coordinator.
+//                """
+//            )
+        }
+    }
+}
 
 struct RouteEvaluator: RouteEvaluating {
     private let getDeviceState: () -> DeviceState
@@ -272,18 +407,15 @@ struct RouteEvaluator: RouteEvaluating {
         self.getDeviceState = getDeviceState
     }
 
-    func evaluate(current: Route?, dependencyHandler: DependencyLocator) -> Route {
+    func evaluate(current: Route?) -> Route {
         guard TermsOfService.isAgreed else {
             return .tos
         }
 
-        lazy var tunnelManager: TunnelManager = dependencyHandler.getService()
-
         switch getDeviceState() {
         case let .loggedIn(accountData, _):
             if accountData.expiry > Date() {
-                return .outOfTime(interactor: OutOfTimeInteractor(storePaymentManager: dependencyHandler.getService(),
-                                                    tunnelManager: tunnelManager))
+                return .outOfTime
             } else {
                 return .main
             }
@@ -296,17 +428,25 @@ struct RouteEvaluator: RouteEvaluating {
             }
 
         case .revoked:
-            return .revoked(interactor: RevokedDeviceInteractor(tunnelManager: tunnelManager))
+            return .revoked
         }
     }
 }
 
+struct BlockRouteEvaluator: RouteEvaluating {
+    var blockHandler: (Route?) -> Route
+
+    func evaluate(current: Route?) -> Route {
+        blockHandler(current)
+    }
+}
+
 final class DependencyLocator {
-    private var _reg: Dictionary<String, Registry> = [:]
+    private var _reg: [String: Registry] = [:]
 
     private var lock = NSLock()
 
-    private var reg: Dictionary<String, Registry> {
+    private var reg: [String: Registry] {
         set {
             lock.lock()
             defer {
@@ -364,7 +504,7 @@ final class DependencyLocator {
 
     func getService<T>(shouldRemoveService: Bool = false) -> T {
         let key = Self.typeName(of: T.self)
-        var instance: Any? = nil
+        var instance: Any?
 
         if let service = reg[key] {
             instance = service.unwrap()

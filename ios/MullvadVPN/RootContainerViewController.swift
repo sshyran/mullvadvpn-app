@@ -59,6 +59,7 @@ protocol RootContainerViewControllerDelegate: AnyObject {
 
 /// A root container view controller
 class RootContainerViewController: UIViewController {
+    weak var naivgationDelegate: NavigatorType?
     typealias CompletionHandler = () -> Void
 
     private let headerBarView = HeaderBarView(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
