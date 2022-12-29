@@ -153,29 +153,29 @@ jobs:
                 name: apks
                 path: android
 
-            - name: AVD cache
-              uses: actions/cache@v3
-              id: avd-cache
-              with:
-                path: |
-                  ~/.android/avd/*
-                  ~/.android/adb*
-                key: emulator-api-33
+            # - name: AVD cache
+            #   uses: actions/cache@v3
+            #   id: avd-cache
+            #   with:
+            #     path: |
+            #       ~/.android/avd/*
+            #       ~/.android/adb*
+            #     key: emulator-api-33-test1
 
-            - name: Create avd and generate snapshot
-              uses: reactivecircus/android-emulator-runner@v2
-              if: steps.avd-cache.outputs.cache-hit != 'true'
-              env:
-                API_LEVEL: 33
-              with:
-                force-avd-creation: false
-                api-level: 33
-                target: google_apis
-                arch: x86_64
-                emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-                disable-animations: true
-                profile: pixel
-                script: echo "Generated AVD snapshot for caching."
+            # - name: Create avd and generate snapshot
+            #   uses: reactivecircus/android-emulator-runner@v2
+            #   if: steps.avd-cache.outputs.cache-hit != 'true'
+            #   env:
+            #     API_LEVEL: 33
+            #   with:
+            #     force-avd-creation: false
+            #     api-level: 33
+            #     target: google_apis
+            #     arch: x86_64
+            #     emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+            #     disable-animations: true
+            #     profile: pixel
+            #     script: echo "Generated AVD snapshot for caching."
 
             - name: Run Android instrumented tests
               uses: reactivecircus/android-emulator-runner@v2
@@ -184,7 +184,7 @@ jobs:
                 ORCHESTRATOR_APK_PATH: /tmp/orchestrator.apk
                 TEST_SERVICES_APK_PATH: /tmp/test-services.apk
               with:
-                force-avd-creation: false
+                force-avd-creation: true # TODO: Set to false
                 api-level: 33
                 target: google_apis
                 arch: x86_64
