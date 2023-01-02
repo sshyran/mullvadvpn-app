@@ -1,5 +1,6 @@
 package net.mullvad.mullvadvpn.test.mockapi
 
+import android.util.Log
 import androidx.test.runner.AndroidJUnit4
 import androidx.test.uiautomator.By
 import java.time.OffsetDateTime
@@ -23,7 +24,11 @@ class LoginMockApiTest : MockApiTest() {
         app.launch(endpoint)
 
         // Act
-        device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        try {
+            device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        } catch (ex: Exception) {
+            Log.e("mullvad", "UNABLE TO DISMISS NOTIFICATION")
+        }
         app.attemptLogin(validAccountToken)
 
         // Assert
@@ -42,7 +47,11 @@ class LoginMockApiTest : MockApiTest() {
 
         // Act
         app.launch(endpoint)
-        device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        try {
+            device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        } catch (ex: Exception) {
+            Log.e("mullvad", "UNABLE TO DISMISS NOTIFICATION")
+        }
         app.attemptLogin(validAccountToken)
 
         // Assert
@@ -61,7 +70,11 @@ class LoginMockApiTest : MockApiTest() {
 
         // Act
         app.launch(endpoint)
-        device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        try {
+            device.clickAllowOnNotificationPermissionPromptIfApiLevel31AndAbove()
+        } catch (ex: Exception) {
+            Log.e("mullvad", "UNABLE TO DISMISS NOTIFICATION")
+        }
         app.attemptLogin(validAccountToken)
 
         // Assert
