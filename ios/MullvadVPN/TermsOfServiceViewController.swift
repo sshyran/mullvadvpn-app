@@ -10,8 +10,7 @@ import SafariServices
 import UIKit
 
 class TermsOfServiceViewController: UIViewController, RootContainment,
-    SFSafariViewControllerDelegate
-{
+    SFSafariViewControllerDelegate, Routable {
     var completionHandler: ((UIViewController) -> Void)?
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
@@ -24,6 +23,10 @@ class TermsOfServiceViewController: UIViewController, RootContainment,
 
     var prefersHeaderBarHidden: Bool {
         return false
+    }
+
+    var route: Route {
+        .tos
     }
 
     // MARK: - View lifecycle

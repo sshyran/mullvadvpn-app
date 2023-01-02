@@ -33,7 +33,7 @@ protocol SettingsNavigationControllerDelegate: AnyObject {
 }
 
 class SettingsNavigationController: CustomNavigationController, SettingsViewControllerDelegate,
-    AccountViewControllerDelegate, UIAdaptivePresentationControllerDelegate
+    AccountViewControllerDelegate, UIAdaptivePresentationControllerDelegate, Routable
 {
     private let interactorFactory: SettingsInteractorFactory
 
@@ -45,6 +45,10 @@ class SettingsNavigationController: CustomNavigationController, SettingsViewCont
 
     override var childForStatusBarHidden: UIViewController? {
         return topViewController
+    }
+
+    var route: Route {
+        .settings
     }
 
     init(interactorFactory: SettingsInteractorFactory) {

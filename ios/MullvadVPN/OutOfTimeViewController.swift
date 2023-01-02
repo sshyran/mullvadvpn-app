@@ -17,7 +17,7 @@ protocol OutOfTimeViewControllerDelegate: AnyObject {
     func outOfTimeViewControllerDidEndPayment(_ controller: OutOfTimeViewController)
 }
 
-class OutOfTimeViewController: UIViewController, RootContainment {
+class OutOfTimeViewController: UIViewController, RootContainment, Routable {
     weak var delegate: OutOfTimeViewControllerDelegate?
 
     private let interactor: OutOfTimeInteractor
@@ -53,6 +53,10 @@ class OutOfTimeViewController: UIViewController, RootContainment {
 
     var prefersHeaderBarHidden: Bool {
         return false
+    }
+
+    var route: Route {
+        .outOfTime
     }
 
     init(interactor: OutOfTimeInteractor) {

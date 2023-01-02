@@ -9,7 +9,7 @@
 import Foundation
 import UIKit
 
-class SelectLocationNavigationController: UINavigationController {
+class SelectLocationNavigationController: UINavigationController, Routable {
     override var childForStatusBarStyle: UIViewController? {
         return topViewController
     }
@@ -26,5 +26,9 @@ class SelectLocationNavigationController: UINavigationController {
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    var route: Route {
+        .selectLocation
     }
 }

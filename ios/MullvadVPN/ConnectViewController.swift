@@ -16,7 +16,7 @@ protocol ConnectViewControllerDelegate: AnyObject {
     func connectViewControllerShouldShowSelectLocationPicker(_ controller: ConnectViewController)
 }
 
-class ConnectViewController: UIViewController, MKMapViewDelegate, RootContainment {
+class ConnectViewController: UIViewController, MKMapViewDelegate, RootContainment, Routable {
     private static let geoJSONSourceFileName = "countries.geo.json"
     private static let locationMarkerReuseIdentifier = "location"
 
@@ -73,6 +73,16 @@ class ConnectViewController: UIViewController, MKMapViewDelegate, RootContainmen
             updateLocation(animated: isViewVisible)
         }
     }
+
+    var route: Route {
+        .main
+    }
+
+//    required init(for interface: UIUserInterfaceIdiom, with dependencyHandler: RouteDependency) {
+//        super.init(nibName: nil, bundle: nil)
+//
+//        
+//    }
 
     init(interactor: ConnectInteractor) {
         self.interactor = interactor

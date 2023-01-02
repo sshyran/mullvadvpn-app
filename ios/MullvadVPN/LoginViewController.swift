@@ -41,7 +41,7 @@ protocol LoginViewControllerDelegate: AnyObject {
     func loginViewControllerDidFinishLogin(_ controller: LoginViewController)
 }
 
-class LoginViewController: UIViewController, RootContainment {
+class LoginViewController: UIViewController, RootContainment, Routable {
     private lazy var contentView: LoginContentView = {
         let view = LoginContentView(frame: self.view.bounds)
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -106,6 +106,10 @@ class LoginViewController: UIViewController, RootContainment {
 
     var prefersHeaderBarHidden: Bool {
         return false
+    }
+
+    var route: Route {
+        .login
     }
 
     override func viewDidLoad() {

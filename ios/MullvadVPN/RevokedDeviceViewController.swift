@@ -12,7 +12,7 @@ protocol RevokedDeviceViewControllerDelegate: AnyObject {
     func revokedDeviceControllerDidRequestLogout(_ controller: RevokedDeviceViewController)
 }
 
-class RevokedDeviceViewController: UIViewController, RootContainment {
+class RevokedDeviceViewController: UIViewController, RootContainment, Routable {
     private lazy var imageView: StatusImageView = {
         let statusImageView = StatusImageView(style: .failure)
         statusImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -100,6 +100,10 @@ class RevokedDeviceViewController: UIViewController, RootContainment {
     }
 
     private let interactor: RevokedDeviceInteractor
+
+    var route: Route {
+        .revoked
+    }
 
     init(interactor: RevokedDeviceInteractor) {
         self.interactor = interactor

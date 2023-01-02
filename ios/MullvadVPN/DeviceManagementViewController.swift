@@ -16,7 +16,7 @@ protocol DeviceManagementViewControllerDelegate: AnyObject {
     func deviceManagementViewControllerDidCancel(_ controller: DeviceManagementViewController)
 }
 
-class DeviceManagementViewController: UIViewController, RootContainment {
+class DeviceManagementViewController: UIViewController, RootContainment, Routable {
     weak var delegate: DeviceManagementViewControllerDelegate?
 
     var preferredHeaderBarPresentation: HeaderBarPresentation {
@@ -41,6 +41,10 @@ class DeviceManagementViewController: UIViewController, RootContainment {
 
     private let logger = Logger(label: "DeviceManagementViewController")
     private let interactor: DeviceManagementInteractor
+
+    var route: Route {
+        .deviceManagement
+    }
 
     init(interactor: DeviceManagementInteractor) {
         self.interactor = interactor
